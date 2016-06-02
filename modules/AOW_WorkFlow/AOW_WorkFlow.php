@@ -534,7 +534,27 @@ class AOW_WorkFlow extends Basic {
                         break;
 
                     case 'Any_Change':
-                        $value = $condition_bean->fetched_row[$condition->field];
+
+                        // If it is an audited field, then get the previous value from the Audit table
+                        if($data['audited'] == true) {
+                            $sql = "SELECT date_created, after_value_string, before_value_string FROM " . $condition_bean->table_name . "_audit WHERE field_name = '". $data['name'] ."' ORDER BY date_created DESC LIMIT 1";
+                            $result = $this->db->query($sql);
+
+                            while ($row = $this->db->fetchByAssoc($result)) {
+                                $before_value = $row['before_value_string'];
+                                $after_value = $row['after_value_string'];
+                                $audit_date_created = $row['date_created'];
+                            }
+
+                            if($after_value == $condition_bean->fetched_row[$condition->field] && strtotime($audit_date_created) == strtotime($condition_bean->date_modified)) {
+                                $value = $before_value;
+                            } else {
+                                $value = $condition_bean->fetched_row[$condition->field];
+                            }
+                        } else {
+                            $value = $condition_bean->fetched_row[$condition->field];
+                        }
+
                         if(in_array($data['type'],$dateFields)) {
                             $value = strtotime($value);
                         }
